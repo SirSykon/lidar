@@ -1,3 +1,7 @@
+#Input or output data
+input/
+output/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
