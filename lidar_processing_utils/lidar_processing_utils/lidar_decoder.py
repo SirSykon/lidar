@@ -17,12 +17,14 @@ from typing import Tuple, List
 
 def get_cloud_point_from_bag(bag_path:str) -> np.ndarray:
     """
+    DEPRECATED
     Function to read a .bag ros file.
     """
     pass
 
 def generate_csv_from_bag(bag_path:str, topic:str, force:bool = True) -> str:
     """
+    DEPRECATED
     Function to generate a .csv file with the bag messages regarding a given topic.
     bag_path : str -> .bg file path.
     topic : str -> Topic from which to extract messages.
@@ -39,6 +41,7 @@ def generate_csv_from_bag(bag_path:str, topic:str, force:bool = True) -> str:
 
 def read_cloud_csv(cloud_csv_path:str, print_info:bool=False) -> pd.DataFrame:
     """
+    DEPRECATED
     Function to read a .csv file with cloud data messages and return it as pd.Dataframe.
     cloud_csv_path : str -> .csv file path.
     print_info : bool -> Do we print dataframe information?
@@ -57,6 +60,7 @@ def read_cloud_csv(cloud_csv_path:str, print_info:bool=False) -> pd.DataFrame:
 
 def get_points_from_lidar_msg(msg:pd.Series) -> np.ndarray:
     """
+    DEPRECATED
     Function to get a Nx3 matrix with the N points positions in msg.
     msg : pd.Series -> Lidar message.
     """
@@ -69,6 +73,7 @@ def get_points_from_lidar_msg(msg:pd.Series) -> np.ndarray:
 
 def from_lidar_msg_to_numpy(msg:pd.Series) -> np.ndarray:
     """
+    DEPRECATED
     Function to transform a msg containing pointcloud2 array information to a 3D-matrix.
     msg : pd.Series -> Lidar message.
     """
@@ -93,7 +98,9 @@ def from_lidar_msg_to_numpy(msg:pd.Series) -> np.ndarray:
     return points_matrix
 
 def project_to_2D(points_matrix:np.ndarray, axis:int) -> np.ndarray:
-
+    """
+    Funtion to get a 2D projection from 3D matrix.
+    """
     assert len(points_matrix) > axis
 
     projected_points_matrix = np.sum(points_matrix, axis=axis)
