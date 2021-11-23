@@ -116,6 +116,18 @@ def generator_msgs_from_rosbag(bag:rosbag.bag.Bag, topics:List[str]) -> Generato
     """
     for topic, msg, t in bag.read_messages(topics=topics):
         yield topic, msg, t
+
+def generator_numpy_vectors_from_rosbag(bag:rosbag.bag.Bag, topics:List[str]) -> Generator[np.ndarray, None, None]:
+    """
+    Function to read rosbag and return information as a numpy vector.
+    bag:rosbag.bag.Bag -> The bag to read messages from.
+    topics:list(str) -> Topics to get messages from the bag.
+    """
+
+    for topic, msg, t in generator_msgs_from_rosbag(bag, topics):
+        cloud_data = get_numpy_vector_from_pointcloud2_msg(msg)
+        cloud_data = np.concatenate([cloud_data, np.ones(shape=(cloud_data.shape[0],1))*t.to_time()], axis=1)
+        yield cloud_data
  
 def read_bag(bag_path:str, print_bag_info:bool=False) -> rosbag.bag.Bag:
     """
@@ -183,11 +195,12 @@ def get_numpy_vector_from_ORCA_Uboat_USVInland_csv(orca_csv_path:str, indexes:Li
 
 def generator_numpy_vectors_from_ORCA_Uboat_USVInland_csv(orca_csv_folder_path:str, indexes:List[int]=[0,1,2,3,4,5,6,7,]) -> Generator[np.ndarray, None, None]:
     """
-    Function to read ORCA_Uboat_USVInland lidar .csv folder.
+    Function to read ORCA_Uboat_USVInland lidar .csv folder and return information as a numpy vector.
     orca_csv_folder_path:str -> Path to ORCA_Uboat_USVInland .csv folder.
     indexes:List[int] -> List of data indexes to get. Default [0,1,2,3,4,5,6,7].
     """
     csv_path_list = sorted(glob(os.path.join(orca_csv_folder_path, "*.csv")))
     for csv_path in csv_path_list:
         yield get_numpy_vector_from_ORCA_Uboat_USVInland_csv(csv_path, indexes=indexes)
+
 

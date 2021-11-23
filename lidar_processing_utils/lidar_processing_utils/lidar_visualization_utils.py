@@ -72,34 +72,6 @@ def update_cloud_rendering(vis:o3d.cpu.pybind.visualization.Visualizer, pcd:o3d.
 
     return vis, pcd
 
-def show_cloud_messages_from_rosbag(rosbag:rosbag.bag.Bag) -> None:
-    """
-    Process to get all cloud messages from a bag and visualize them in 3D real time.
-    rosbag : rosbag.bag.Bag -> Ros bag as readed by rosbag package.
-    """
-
-    print("Rendering point clouds from received bag.")
-    vis = None
-    dt = 0.1
-    last_time = None
-    for topic, msg, t in generator_msgs_from_rosbag(rosbag, ['/cloud']):
-        cloud_data = get_numpy_vector_from_pointcloud2_msg(msg)
-        sparse_representation = cloud_data[:,:3]
-        intensities = cloud_data[:,3]
-        if last_time is None:
-            last_time = t.to_time()
-        else:
-            aux_t = t.to_time()
-            dt = aux_t - last_time
-            last_time = aux_t
-        time.sleep(dt)
-        if vis is None:
-            vis, pcd = initialize_cloud_rendering(sparse_representation, intensities2colors(intensities))
-        else:
-            vis, pcd = update_cloud_rendering(vis,pcd,sparse_representation, intensities2colors(intensities))
-
-    print("Redering finished.")
-
 def get_cloud_points_as_image(points_matrix:np.ndarray) -> np.ndarray:
     """
     Function to transform a cloud points numpy matrix as image.
@@ -129,6 +101,7 @@ def show_cloud_from_numpy_vector_generator(generator:Generator[np.ndarray, None,
         else:
             dt = time_stamp - last_time
             last_time = time_stamp
+        print(f"dt={dt}")
         time.sleep(dt)
         if vis is None:
             vis, pcd = initialize_cloud_rendering(sparse_representation, intensities2colors(intensities))
@@ -143,3 +116,10 @@ def show_cloud_from_ORCA_Uboat_USVInland_lidar_data_folder(orca_csv_folder_path:
     orca_csv_folder_path:str -> Path to folder with .csv files.
     """
     show_cloud_from_numpy_vector_generator(generator_numpy_vectors_from_ORCA_Uboat_USVInland_csv(orca_csv_folder_path, indexes=[0,1,2,6,7]))
+
+def show_cloud_messages_from_rosbag(rosbag:rosbag.bag.Bag) -> None:
+    """
+    Process to get all cloud messages from rosbag file and visualize them in 3D real time.
+    rosbag : rosbag.bag.Bag -> Ros bag as readed by rosbag package.
+    """
+    show_cloud_from_numpy_vector_generator(generator_numpy_vectors_from_rosbag(rosbag, ['/cloud']))
