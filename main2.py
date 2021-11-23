@@ -1,0 +1,5 @@
+import lidar_processing_utils.lidar_processing_utils as lidar_processing_utils
+
+csv_folder_path = "./input/ORCA/H05_7_Sequence_160_270/Lidar/Lidar/"
+
+lidar_processing_utils.show_cloud_from_ORCA_Uboat_USVInland_lidar_data_folder(csv_folder_path)

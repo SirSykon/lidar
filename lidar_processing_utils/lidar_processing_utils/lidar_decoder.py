@@ -1,19 +1,19 @@
 """
 Code to process LIDAR information.
 Author: Jorge García-González
-Last Update: 11/11/2021
+Last Update: 23/11/2021
 """
 
-import time
 from bagpy import bagreader
 import pandas as pd
 import os
 import numpy as np
-import open3d as o3d
 import rosbag
 import rospy
 import ros_numpy
-from typing import Tuple, List
+from typing import Tuple, List, Generator
+import csv
+from glob import glob
 
 def get_cloud_point_from_bag(bag_path:str) -> np.ndarray:
     """
@@ -108,7 +108,7 @@ def project_to_2D(points_matrix:np.ndarray, axis:int) -> np.ndarray:
 
     return normalized_projected_points_matrix/np.max(normalized_projected_points_matrix)
 
-def generator_msgs_from_rosbag(bag:rosbag.bag.Bag, topics:List[str]) -> Tuple[str, object, rospy.rostime.Time]:
+def generator_msgs_from_rosbag(bag:rosbag.bag.Bag, topics:List[str]) -> Generator[Tuple[str, object, rospy.rostime.Time], None, None]:
     """
     Function to return ros messages contained in a ros .bag file in bag_path.
     bag:rosbag.bag.Bag -> The bag to read messages from.
@@ -117,7 +117,6 @@ def generator_msgs_from_rosbag(bag:rosbag.bag.Bag, topics:List[str]) -> Tuple[st
     for topic, msg, t in bag.read_messages(topics=topics):
         yield topic, msg, t
  
-
 def read_bag(bag_path:str, print_bag_info:bool=False) -> rosbag.bag.Bag:
     """
     Function to get a rosbag bag from ros .bag file.
@@ -131,11 +130,10 @@ def read_bag(bag_path:str, print_bag_info:bool=False) -> rosbag.bag.Bag:
 
     return bag
 
-
 def close_bag(bag:rosbag.bag.Bag):
     bag.close()
 
-def get_numpy_sparse_representation_from_pointcloud2_msg(pointcloud2_msg:object):
+def get_numpy_sparse_representation_from_pointcloud2_msg(pointcloud2_msg:object) -> np.ndarray:
     """
     Funtion to get a numpy matrix with the sparse representation of points contained in a point cloud 2 ros message.
     pointcloud2_msg:object -> The point cloud 2 ros message to get the points from.
@@ -143,66 +141,53 @@ def get_numpy_sparse_representation_from_pointcloud2_msg(pointcloud2_msg:object)
     sparse_representation_of_points = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(pointcloud2_msg, remove_nans=True) 
     return sparse_representation_of_points
 
-def show_cloud(sparse_representation_of_points:np.ndarray) -> None:
+def get_numpy_matrix_from_pointcloud2_msg(pointcloud2_msg:object)-> np.ndarray:
     """
-    Procedure to show 3D vidualization of sparse representation of points.
-    sparse_representation_of_points : np.ndarray -> Nx3 matrix with N (x,y,z) points.
+    Funtion to get a numpy matrix of points contained in a point cloud 2 ros message.
+    pointcloud2_msg:object -> The point cloud 2 ros message to get the points from.
     """
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(sparse_representation_of_points)
-    o3d.visualization.draw_geometries([pcd])
-
-def initialize_cloud_rendering(sparse_representation_of_points:np.ndarray) -> o3d.cpu.pybind.visualization.Visualizer:
+    np_array = ros_numpy.point_cloud2.pointcloud2_to_array(pointcloud2_msg)
+    shape = np_array.shape
+    r_np_array = np.reshape(np_array, (np_array.shape[0]*np_array.shape[1]))
+    aux = []
+    for tup in r_np_array:
+        aux.append([tup[0],tup[1],tup[2],tup[3]])
+    
+    return np.reshape(np.array(aux), (shape[0],shape[1],4))
+    
+def get_numpy_vector_from_pointcloud2_msg(pointcloud2_msg:object)-> np.ndarray:
     """
-    TODO: Description.
+    Funtion to get a numpy vector of points contained in a point cloud 2 ros message.
+    pointcloud2_msg:object -> The point cloud 2 ros message to get the points from.
     """
+    np_array = ros_numpy.point_cloud2.pointcloud2_to_array(pointcloud2_msg)
+    r_np_array = np.reshape(np_array, (np_array.shape[0]*np_array.shape[1]))
+    aux = []
+    for tup in r_np_array:
+        aux.append([tup[0],tup[1],tup[2],tup[3]])
+    return np.array(aux)
 
-    vis = o3d.visualization.Visualizer()
-    print(type(vis))
-    vis.create_window()
-
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(sparse_representation_of_points)
-    vis.add_geometry(pcd)
-    return vis, pcd
-
-def update_cloud_rendering(vis:o3d.cpu.pybind.visualization.Visualizer, pcd, sparse_representation_of_points:np.ndarray) -> o3d.cpu.pybind.visualization.Visualizer:
+def get_numpy_vector_from_ORCA_Uboat_USVInland_csv(orca_csv_path:str, indexes:List[int]=[0,1,2,3,4,5,6,7,]) -> np.ndarray:
     """
-    TODO: Description.
+    Function to read ORCA_Uboat_USVInland lidar .csv.
+    orca_csv_path:str -> Path to ORCA_Uboat_USVInland .csv.
+    indexes:List[int] -> List of data indexes to get. Default [0,1,2,3,4,5,6,7].
     """
+    np_array = []
+    with open(orca_csv_path, 'r') as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=',')
+        for row in csv_reader:
+            np_array.append(np.array(row).astype(np.float)[indexes])
 
-    pcd.points = o3d.utility.Vector3dVector(sparse_representation_of_points)
-    vis.update_geometry(pcd)
-    vis.poll_events()
-    vis.update_renderer()
+        return np.array(np_array)
 
-    return vis, pcd
-
-def show_cloud_messages_from_rosbag(rosbag:rosbag.bag.Bag) -> None:
+def generator_numpy_vectors_from_ORCA_Uboat_USVInland_csv(orca_csv_folder_path:str, indexes:List[int]=[0,1,2,3,4,5,6,7,]) -> Generator[np.ndarray, None, None]:
     """
-    Process to get all cloud messages from a bag and visualize them in 3D real time.
-    rosbag : rosbag.bag.Bag -> Ros bag as readed by rosbag package.
+    Function to read ORCA_Uboat_USVInland lidar .csv folder.
+    orca_csv_folder_path:str -> Path to ORCA_Uboat_USVInland .csv folder.
+    indexes:List[int] -> List of data indexes to get. Default [0,1,2,3,4,5,6,7].
     """
-
-    print("Rendering point clouds from received bag.")
-    vis = None
-    dt = 0.1
-    last_time = None
-    for topic, msg, t in generator_msgs_from_rosbag(rosbag, ['/cloud']):
-        sparse_representation = get_numpy_sparse_representation_from_pointcloud2_msg(msg)
-        if last_time is None:
-            last_time = t.to_time()
-        else:
-            aux_t = t.to_time()
-            dt = aux_t - last_time
-            last_time = aux_t
-        time.sleep(dt)
-        if vis is None:
-            vis, pcd = initialize_cloud_rendering(sparse_representation)
-        else:
-            vis, pcd = update_cloud_rendering(vis,pcd,sparse_representation)
-
-    print("Redering finished.")
-
-
+    csv_path_list = sorted(glob(os.path.join(orca_csv_folder_path, "*.csv")))
+    for csv_path in csv_path_list:
+        yield get_numpy_vector_from_ORCA_Uboat_USVInland_csv(csv_path, indexes=indexes)
 
