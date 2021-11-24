@@ -4,7 +4,7 @@ TODO list in the near future:
 
 Data processing side:
 
-- [ ] Properly transform from lidar intensities to colors to allow a better visualization.
+- [x] Properly transform from lidar intensities to colors to allow a better visualization.
 - [ ] Get a correspondence between lidar points and camera pixels.
 
 Deep Learning side:

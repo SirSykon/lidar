@@ -4,6 +4,7 @@ import rosbag
 import time
 from typing import Tuple, List, Generator
 from .lidar_decoder import *
+import matplotlib
 
 def show_cloud(sparse_representation_of_points:np.ndarray, color_for_each_point:np.ndarray=None) -> None:
     """
@@ -23,17 +24,12 @@ def intensities2colors(intensities:np.ndarray, normalize:bool=True) -> np.ndarra
     intensities:np.ndarray -> Nx1 intensities vector.
     """
 
-    colors = np.zeros((intensities.shape[0],3))
-    colors[:,0] = intensities
-    colors[:,1] = 0.5
-    colors[:,2] = 0.5
+    cmap = matplotlib.cm.get_cmap('cool')
+    normalized_intensities = intensities/255.
+    colors = cmap(normalized_intensities)[:,:3]
 
-    if normalize:
-        minimum = np.min(colors[:,0])
-        colors[:,0] = colors[:,0]-minimum
-        new_maximum = np.max(colors[:,0])
-        colors[:,0] = colors[:,0]/new_maximum
-        colors[:,0] = colors[:,0]
+    if not normalize:
+        colors = colors*255.
 
     return colors
 
@@ -62,7 +58,6 @@ def update_cloud_rendering(vis:o3d.cpu.pybind.visualization.Visualizer, pcd:o3d.
     sparse_representation_of_points : np.ndarray -> Nx3 matrix with N (x,y,z) points.
     color_for_each_point : np.ndarray -> Nx3 matrix with N colors to be used. If None, generic color degradation will be used (default None).
     """
-    print(color_for_each_point)
     pcd.points = o3d.utility.Vector3dVector(sparse_representation_of_points)
     if not color_for_each_point is None:
         pcd.colors = o3d.utility.Vector3dVector(color_for_each_point)
