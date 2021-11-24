@@ -10,6 +10,34 @@ import open3d as o3d
 import csv
 import pandas as pd
 import copy
+import colour
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+def intensity2rgb(input_arr):
+    arr = input_arr*255
+    color_array = np.zeros((len(arr),3))
+
+    for i in range(len(arr)):
+        if arr[i]!=0:
+            a = colour.RGB_color_picker(arr[i])
+            b = a.rgb
+
+            color_array[i,0] = b[0]
+            color_array[i,1] = b[1]
+            color_array[i,2] = b[2]
+
+    return color_array
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+def read_csv_data(this_data, this_current_timestamp):
+    this_current_data = this_data.loc[this_data['unix timestamp'] == this_current_timestamp]
+    this_xyz_array = this_current_data.loc[:, ['x', 'y', 'z']].values
+    #this_int_array = 0*np.ones((len(this_xyz_array),3)) # format needed for o3d color processing
+    #this_int_array[:,0] = this_current_data.loc[:,'intensity'].values
+
+    this_int_array = intensity2rgb(this_current_data.loc[:,'intensity'].values)
+
+    return this_xyz_array, this_int_array
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
 #read in the csv file
@@ -21,11 +49,7 @@ i = 0
 #------------------------------------------------------------------------------
 # get first timestamp
 current_timestamp = my_data.iloc[i,0]
-# read associated data
-current_data = my_data.loc[my_data['unix timestamp'] == current_timestamp]
-xyz_array = current_data.loc[:, ['x', 'y', 'z']].values
-int_array = np.zeros((len(xyz_array),3)) # format needed for o3d color processing
-int_array[:,0] = current_data.loc[:,'intensity'].values
+xyz_array, int_array = read_csv_data(this_data=my_data, this_current_timestamp=current_timestamp)
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
 #implement visualization
@@ -37,6 +61,11 @@ geometry = o3d.geometry.PointCloud()
 
 geometry.points = o3d.utility.Vector3dVector(xyz_array.astype(float))
 geometry.colors = o3d.utility.Vector3dVector(int_array.astype(float))
+
+#vis.add_geometry(geometry)
+
+R = geometry.get_rotation_matrix_from_xyz((3*np.pi / 2, 0, np.pi / 2))
+geometry.rotate(R, center=(0,0,0))
 
 vis.add_geometry(geometry)
 
@@ -54,29 +83,18 @@ for i in np.arange(0,len(my_data), len(xyz_array)):
     current_timestamp = my_data.iloc[i,0]
     print(current_timestamp)
     # read associated data
-    current_data = my_data.loc[my_data['unix timestamp'] == current_timestamp]
-    xyz_array = current_data.loc[:, ['x', 'y', 'z']].values
-    int_array = np.zeros((len(xyz_array),3)) # format needed for o3d color processing
-    int_array[:,0] = current_data.loc[:,'intensity'].values
+    xyz_array, int_array = read_csv_data(this_data=my_data, this_current_timestamp=current_timestamp)
 
     geometry.points = o3d.utility.Vector3dVector(xyz_array.astype(float))
     geometry.colors = o3d.utility.Vector3dVector(int_array.astype(float))
-    #o3d.visualization.draw_geometries([geometry])
-    
+    geometry.rotate(R, center=(0,0,0))
+
     vis.update_geometry(geometry)
+    geometry.translate((2,2,2), relative = False)
     
     vis.run()
     vis.poll_events()
     vis.update_renderer()
     print(i)
-    
-# pcd = o3d.geometry.PointCloud()
-# print('points to o3d')
-# pcd.points = o3d.utility.Vector3dVector(xyz_array.astype(float))
-# pcd.colors = o3d.utility.Vector3dVector(int_array.astype(float))
-# print('write to o3d')
-# o3d.visualization.draw_geometries([pcd])
-
-#https://stackoverflow.com/questions/62912397/open3d-visualizing-multiple-point-clouds-as-a-video-animation
 
 print('Done')
