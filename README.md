@@ -13,5 +13,3 @@ Deep Learning side:
 - [ ] Test it.
 - [ ] Fix it.
 - [ ] Jump to three tasks ago.
-
-
